@@ -12,24 +12,100 @@ bug_to_user_story_v2:
     - A história usa sempre "eu quero" e "para que"
     - Os critérios de aceitação principais usam sempre "Dado que / Quando / Então / E"
     - Para bugs simples (sem detalhes técnicos): produza apenas a história e os critérios de aceitação
-    - Para bugs com dados técnicos ou contexto específico: inclua seções adicionais que reflitam exatamente o que está no relato (ex: "Contexto Técnico:", "Contexto de Segurança:", "Critérios Técnicos:", "Exemplo de Cálculo:")
+    - Para bugs com dados técnicos ou contexto específico: inclua seções adicionais que reflitam exatamente o que está no relato (ex: "Contexto Técnico:", "Contexto de Segurança:", "Critérios Técnicos:", "Exemplo de Cálculo:", "Critérios de Prevenção:", "Critérios de Acessibilidade:", "Contexto do Bug:")
     - Quando o bug afeta múltiplos perfis de usuário: crie seções BDD separadas para cada perfil
 
     Veja os exemplos abaixo e siga exatamente o mesmo formato:
 
-    --- EXEMPLO 1 (bug simples — sem seções extras) ---
-    Bug Report: Dashboard mostra contagem errada de usuários ativos. Mostra 50 mas só há 42 na lista.
+    --- EXEMPLO 1 (bug de UI com múltiplos critérios e seção de acessibilidade) ---
+    Bug Report: Modal de confirmação de exclusão aparece atrás do menu lateral em telas pequenas (< 768px).
 
-    Como um administrador visualizando o dashboard, eu quero ver a contagem correta de usuários ativos, para que eu possa tomar decisões baseadas em dados precisos.
+    Detalhes:
+    - z-index do modal: 1000
+    - z-index do menu lateral: 1050
+    - Usuários não conseguem clicar nos botões do modal
+    - Precisam fechar o menu lateral antes
+
+    Como um usuário em dispositivo móvel, eu quero que modais importantes apareçam acima de todos os outros elementos, para que eu possa interagir com eles sem precisar fechar outros componentes.
 
     Critérios de Aceitação:
-    - Dado que acesso o dashboard como admin
-    - Quando visualizo a métrica de usuários ativos
-    - Então o número exibido deve corresponder ao total real de usuários ativos
-    - E o valor deve ser atualizado em tempo real
-    - E deve incluir apenas usuários com status "ativo"
+    - Dado que estou em uma tela com largura menor que 768px
+    - Quando aciono uma ação que abre um modal de confirmação
+    - Então o modal deve aparecer acima de todos os elementos da página
+    - E o menu lateral deve ficar desfocado (backdrop)
+    - E todos os botões do modal devem ser clicáveis
+    - E o modal deve ocupar pelo menos 90% da largura da tela
 
-    --- EXEMPLO 2 (bug de performance com contexto técnico) ---
+    Critérios de Acessibilidade:
+    - O foco do teclado deve ir para o modal
+    - Deve ser possível fechar com ESC
+    - O backdrop deve fechar ao clicar fora
+
+    Contexto Técnico:
+    - Bug atual: z-index modal (1000) < z-index menu (1050)
+    - Solução: ajustar z-index do modal para > 1050
+    - Devices afetados: mobile e tablets (< 768px)
+
+    --- EXEMPLO 2 (bug de estoque com múltiplos critérios e critérios de prevenção) ---
+    Bug Report: Carrinho permite finalizar compra mesmo com produto fora de estoque.
+
+    Fluxo do bug:
+    1. Produto tem 2 unidades em estoque
+    2. Cliente A adiciona 2 unidades ao carrinho
+    3. Estoque fica zerado
+    4. Cliente B ainda consegue adicionar ao carrinho
+    5. Cliente B finaliza compra
+    6. Sistema gera pedido mas não tem estoque para enviar
+
+    Como o sistema de e-commerce, eu quero validar disponibilidade de estoque antes de permitir finalização de compra, para que não sejam criados pedidos que não podem ser atendidos.
+
+    Critérios de Aceitação:
+    - Dado que um produto está no carrinho
+    - Quando o cliente tenta finalizar a compra
+    - Então o sistema deve validar estoque disponível em tempo real
+    - E se o produto estiver fora de estoque, deve bloquear a compra
+    - E deve exibir mensagem clara sobre a indisponibilidade
+    - E deve sugerir remover o item ou aguardar reposição
+
+    Critérios de Prevenção:
+    - Quando produto ficar sem estoque
+    - E houver itens em carrinhos de outros clientes
+    - Então deve exibir aviso "estoque limitado" ao adicionar
+    - E deve reservar estoque temporariamente (15 minutos) ao ir para checkout
+
+    Contexto do Bug:
+    - Problema: validação de estoque não é feita no checkout
+    - Impacto: pedidos criados sem possibilidade de atendimento
+    - Cenário crítico: múltiplos clientes comprando último item
+
+    --- EXEMPLO 3 (bug de integração com contexto técnico e 6 critérios BDD) ---
+    Bug Report: Webhook de pagamento aprovado não está sendo chamado.
+
+    Steps to reproduce:
+    1. Fazer pedido de R$ 100
+    2. Pagar com cartão de crédito
+    3. Pagamento é aprovado no gateway
+    4. Sistema não recebe notificação
+    5. Status do pedido fica como "pendente"
+
+    Logs do gateway mostram: HTTP 500 ao tentar POST /api/webhooks/payment
+
+    Como o sistema de e-commerce, eu quero receber notificações de pagamento aprovado via webhook, para que o status dos pedidos seja atualizado automaticamente após confirmação do pagamento.
+
+    Critérios de Aceitação:
+    - Dado que um pagamento é aprovado no gateway
+    - Quando o gateway envia POST para /api/webhooks/payment
+    - Então o endpoint deve retornar HTTP 200
+    - E o status do pedido deve mudar de "pendente" para "aprovado"
+    - E o cliente deve receber email de confirmação
+    - E o sistema deve logar o evento para auditoria
+
+    Contexto Técnico:
+    - Endpoint está retornando HTTP 500
+    - Gateway: [nome do gateway de pagamento]
+    - Logs indicam falha no processamento do webhook
+
+    --- EXEMPLO 4 (bug de performance com contexto técnico) ---
     Bug Report: Relatório de vendas demora mais de 2 minutos para gerar quando filtro ultrapassa 1000 registros.
 
     Detalhes:
@@ -52,7 +128,7 @@ bug_to_user_story_v2:
     - Performance esperada: <30s para qualquer volume
     - Sugestão: adicionar índice e otimizar query SQL
 
-    --- EXEMPLO 3 (bug de segurança com múltiplos perfis e contexto de segurança) ---
+    --- EXEMPLO 5 (bug de segurança com múltiplos perfis e contexto de segurança) ---
     Bug Report: Endpoint /api/users/:id retorna dados de qualquer usuário sem validar permissões.
 
     Exemplo:
@@ -83,7 +159,7 @@ bug_to_user_story_v2:
     - Dados expostos: email, telefone, endereço
     - Ação: Implementar middleware de autorização
 
-    --- EXEMPLO 4 (bug de cálculo com exemplo numérico) ---
+    --- EXEMPLO 6 (bug de cálculo com exemplo numérico) ---
     Bug Report: Pipeline de vendas calcula valor total errado quando há desconto.
 
     Cenário:
@@ -115,7 +191,7 @@ bug_to_user_story_v2:
     - Bug atual: desconto sendo aplicado apenas no primeiro produto
     - Resultado incorreto: R$ 1.400 (deveria ser R$ 1.350)
 
-    --- EXEMPLO 5 (bug mobile com critérios técnicos de implementação) ---
+    --- EXEMPLO 7 (bug mobile com critérios técnicos de implementação) ---
     Bug Report: App Android trava ao carregar lista de notificações com mais de 50 itens.
 
     Observações:
